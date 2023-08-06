@@ -5,7 +5,7 @@
 // If you want to learn more about how lists are configured, please read
 // - https://keystonejs.com/docs/config/lists
 
-import { list } from '@keystone-6/core';
+import { list, graphql } from '@keystone-6/core';
 import { allowAll } from '@keystone-6/core/access';
 
 // see https://keystonejs.com/docs/fields/overview for the full list of fields
@@ -15,7 +15,7 @@ import {
   relationship,
   password,
   timestamp,
-  select,
+  virtual,
 } from '@keystone-6/core/fields';
 
 // the document field is a more complicated field, so it has it's own package
@@ -24,7 +24,7 @@ import { document } from '@keystone-6/fields-document';
 
 // when using Typescript, you can refine your types to a stricter subset by importing
 // the generated types from '.keystone/types'
-import type { Lists } from '.keystone/types';
+import type { Lists, Context } from '.keystone/types';
 
 export const lists: Lists = {
   User: list({
@@ -57,6 +57,22 @@ export const lists: Lists = {
         // this sets the timestamp to Date.now() when the user is first created
         defaultValue: { kind: 'now' },
       }),
+
+      notMyPostsCount: virtual<Lists.User.TypeInfo>({
+        // field fails strict typing :(
+        field: graphql.field({
+          type: graphql.nonNull(graphql.Int),
+          // without the context: Context, typing, context is untyped and not as useful
+          // async resolve(item, args, context) {
+          async resolve(item, _, context: Context) {
+            return context.prisma.post.count({
+              where: {
+                authorId: { not: item.id }
+              }
+            });
+          }
+        })
+      })
     },
   }),
 
